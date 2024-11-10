@@ -89,7 +89,7 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
                 return
             }
 
-            let requestID = imageManager.requestImage(
+            imageManager.requestImage(
                 for: asset,
                 targetSize: targetSize,
                 contentMode: contentMode.option,
