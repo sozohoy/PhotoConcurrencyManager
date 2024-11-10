@@ -1,8 +1,8 @@
 import Photos
 import UIKit
 
-public final class PhotoConcurrencyManager {
-    public enum ImageQuality {
+public final class PhotoConcurrencyManager: @unchecked Sendable {
+    public enum ImageQuality: @unchecked Sendable  {
         case low(UIImage)
         case high(UIImage)
     }
