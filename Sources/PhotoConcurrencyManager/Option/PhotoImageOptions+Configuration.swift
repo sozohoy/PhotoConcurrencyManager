@@ -26,7 +26,7 @@ public extension PhotoImageOptions {
             self.version = version
         }
 
-        static let opportunisticFit = Configuration(
+        public static let opportunisticFit = Configuration(
             synchronousMode: .async,
             deliveryMode: .opportunistic,
             contentMode: .aspectFit,
@@ -35,7 +35,7 @@ public extension PhotoImageOptions {
             version: .current
         )
 
-        static let highQualitySync = Configuration(
+        public static let highQualitySync = Configuration(
             synchronousMode: .sync,
             deliveryMode: .highQuality,
             contentMode: .aspectFit,
@@ -44,7 +44,7 @@ public extension PhotoImageOptions {
             version: .current
         )
 
-        static let thumbnail = Configuration(
+        public static let thumbnail = Configuration(
             synchronousMode: .async,
             deliveryMode: .opportunistic,
             contentMode: .aspectFill,

@@ -10,5 +10,18 @@
 			<integer>0</integer>
 		</dict>
 	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>PhotoConcurrencyManager</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>PhotoConcurrencyManagerTests</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+	</dict>
 </dict>
 </plist>
