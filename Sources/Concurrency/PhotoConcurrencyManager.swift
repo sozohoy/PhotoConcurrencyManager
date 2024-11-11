@@ -16,7 +16,6 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
 
     private let imageCacheManager = ImageCacheManager()
     private let imageManager = PHCachingImageManager()
-    private var currentRequests: [String: PHImageRequestID] = [:]
 
     public init() {}
 
@@ -49,26 +48,28 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
     public func prefetchImages(
         for assets: [PHAsset],
         targetSize: CGSize,
-        contentMode: PhotoImageOptions.ContentMode
+        contentMode: PhotoImageOptions.ContentMode,
+        configuration: PhotoImageOptions.Configuration
     ) {
         imageManager.startCachingImages(
             for: assets,
             targetSize: targetSize,
             contentMode: contentMode.option,
-            options: nil
+            options: configuration.toPHImageRequestOptions()
         )
     }
 
     public func cancelPrefetching(
         for assets: [PHAsset],
         targetSize: CGSize,
-        contentMode: PhotoImageOptions.ContentMode
+        contentMode: PhotoImageOptions.ContentMode,
+        configuration: PhotoImageOptions.Configuration
     ) {
         imageManager.stopCachingImages(
             for: assets,
             targetSize: targetSize,
             contentMode: contentMode.option,
-            options: nil
+            options: configuration.toPHImageRequestOptions()
         )
     }
 
@@ -77,18 +78,12 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
     }
 
     public func loadImage(
-        id: String,
         asset: PHAsset,
         targetSize: CGSize,
         contentMode: PhotoImageOptions.ContentMode,
         configuration: PhotoImageOptions.Configuration
     ) -> AsyncThrowingStream<ImageQuality, Error> {
         AsyncThrowingStream { continuation in
-
-            if let requestId = currentRequests[id] {
-                imageManager.cancelImageRequest(requestId)
-                currentRequests.removeValue(forKey: id)
-            }
 
             imageManager.stopCachingImagesForAllAssets()
 
@@ -103,7 +98,7 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
                 return
             }
 
-            let requestId = imageManager.requestImage(
+            imageManager.requestImage(
                 for: asset,
                 targetSize: targetSize,
                 contentMode: contentMode.option,
@@ -131,13 +126,34 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
                 if isDegraded {
                     continuation.yield(.low(image))
                 } else {
-                    currentRequests.removeValue(forKey: id)
                     self.imageCacheManager.saveImage(image, cacheKey: cacheKey)
                     continuation.yield(.high(image))
                     continuation.finish()
                 }
             }
-            currentRequests[id] = requestId
+        }
+    }
+
+    public func loadImageWhenScrolling(
+        asset: PHAsset,
+        targetSize: CGSize,
+        contentMode: PhotoImageOptions.ContentMode,
+        configuration: PhotoImageOptions.Configuration
+    ) async throws -> UIImage {
+        try await withCheckedThrowingContinuation { continuation in
+            imageManager.requestImage(
+                for: asset,
+                targetSize: targetSize,
+                contentMode: contentMode.option,
+                options: configuration.toPHImageRequestOptions()
+            ) { image, info in
+                guard let image else {
+                    continuation.resume(throwing: ImageLoadingError.noImage)
+                    return
+                }
+
+                continuation.resume(returning: image)
+            }
         }
     }
 }

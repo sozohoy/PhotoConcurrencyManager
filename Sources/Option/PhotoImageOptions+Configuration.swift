@@ -53,6 +53,15 @@ public extension PhotoImageOptions {
             version: .current
         )
 
+        public static let scrolling = Configuration(
+            synchronousMode: .async,
+            deliveryMode: .fast,
+            contentMode: .aspectFill,
+            iCloudAccessMode: .allowed,
+            resizeMode: .fast,
+            version: .current
+        )
+
         func toPHImageRequestOptions() -> PHImageRequestOptions {
             let options = PHImageRequestOptions()
             options.isSynchronous = synchronousMode.option
