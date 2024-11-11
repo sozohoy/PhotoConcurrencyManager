@@ -4,8 +4,8 @@ class ImageCacheManager: @unchecked Sendable {
     static let shared = ImageCacheManager()
 
     private enum Constants {
-        static let maxMemoryCacheSize = 200 * 1024 * 1024
-        static let maxElementsCount = 1000
+        static let maxMemoryCacheSize = 150 * 1024 * 1024
+        static let maxElementsCount = 50
     }
 
     struct CacheKey: Hashable {
