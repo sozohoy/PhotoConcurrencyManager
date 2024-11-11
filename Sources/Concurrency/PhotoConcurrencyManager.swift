@@ -16,7 +16,7 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
 
     private let imageCacheManager = ImageCacheManager()
     private let imageManager = PHCachingImageManager()
-    var currentRequests: [String: PHImageRequestID] = [:]
+    private var currentRequests: [String: PHImageRequestID] = [:]
 
     public init() {}
 
@@ -51,8 +51,6 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
         targetSize: CGSize,
         contentMode: PhotoImageOptions.ContentMode
     ) {
-        imageManager.stopCachingImagesForAllAssets()
-
         imageManager.startCachingImages(
             for: assets,
             targetSize: targetSize,
@@ -72,6 +70,10 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
             contentMode: contentMode.option,
             options: nil
         )
+    }
+
+    public func cancelCachingImagesForAllAssets() {
+        imageManager.stopCachingImagesForAllAssets()
     }
 
     public func loadImage(
