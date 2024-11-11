@@ -50,6 +50,8 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
         targetSize: CGSize,
         contentMode: PhotoImageOptions.ContentMode
     ) {
+        imageManager.stopCachingImagesForAllAssets()
+
         imageManager.startCachingImages(
             for: assets,
             targetSize: targetSize,
@@ -78,6 +80,9 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
         configuration: PhotoImageOptions.Configuration
     ) -> AsyncThrowingStream<ImageQuality, Error> {
         AsyncThrowingStream { continuation in
+            
+            imageManager.stopCachingImagesForAllAssets()
+
             let cacheKey = ImageCacheManager.CacheKey(
                 identifier: asset.localIdentifier,
                 targetSize: targetSize
