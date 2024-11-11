@@ -16,6 +16,7 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
 
     private let imageCacheManager = ImageCacheManager()
     private let imageManager = PHCachingImageManager()
+    var currentRequests: [String: PHImageRequestID] = [:]
 
     public init() {}
 
@@ -33,14 +34,14 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         fetchOptions.predicate =  NSPredicate(
-          format: "mediaType == %d || mediaType == %d",
-          PHAssetMediaType.image.rawValue,
-          PHAssetMediaType.video.rawValue
+            format: "mediaType == %d || mediaType == %d",
+            PHAssetMediaType.image.rawValue,
+            PHAssetMediaType.video.rawValue
         )
         let fetchAssets = PHAsset.fetchAssets(with: fetchOptions)
         var assets: [PHAsset] = []
         fetchAssets.enumerateObjects { asset, _, _ in
-          assets.append(asset)
+            assets.append(asset)
         }
         return assets
     }
@@ -74,13 +75,19 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
     }
 
     public func loadImage(
+        id: String,
         asset: PHAsset,
         targetSize: CGSize,
         contentMode: PhotoImageOptions.ContentMode,
         configuration: PhotoImageOptions.Configuration
     ) -> AsyncThrowingStream<ImageQuality, Error> {
         AsyncThrowingStream { continuation in
-            
+
+            if let requestId = currentRequests[id] {
+                imageManager.cancelImageRequest(requestId)
+                currentRequests.removeValue(forKey: id)
+            }
+
             imageManager.stopCachingImagesForAllAssets()
 
             let cacheKey = ImageCacheManager.CacheKey(
@@ -94,7 +101,7 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
                 return
             }
 
-            imageManager.requestImage(
+            let requestId = imageManager.requestImage(
                 for: asset,
                 targetSize: targetSize,
                 contentMode: contentMode.option,
@@ -122,11 +129,13 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
                 if isDegraded {
                     continuation.yield(.low(image))
                 } else {
+                    currentRequests.removeValue(forKey: id)
                     self.imageCacheManager.saveImage(image, cacheKey: cacheKey)
                     continuation.yield(.high(image))
                     continuation.finish()
                 }
             }
+            currentRequests[id] = requestId
         }
     }
 }
