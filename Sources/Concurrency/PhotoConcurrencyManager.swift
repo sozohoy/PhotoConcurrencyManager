@@ -156,4 +156,55 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
             }
         }
     }
+
+    public func loadImageCompletionHandler(
+        asset: PHAsset,
+        targetSize: CGSize,
+        contentMode: PhotoImageOptions.ContentMode,
+        configuration: PhotoImageOptions.Configuration,
+        completion: @escaping (Result<ImageQuality, ImageLoadingError>) -> Void
+    ) {
+        let cacheKey = ImageCacheManager.CacheKey(
+            identifier: asset.localIdentifier,
+            targetSize: targetSize
+        )
+
+        if let cachedImage = imageCacheManager.getImage(cacheKey: cacheKey) {
+            completion(.success(.high(cachedImage)))
+            return
+        }
+
+        imageManager.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: contentMode.option,
+            options: configuration.toPHImageRequestOptions()
+        ) { [weak self] image, info in
+            guard let self else { return }
+
+            if let error = info?[PHImageErrorKey] as? Error {
+                completion(.failure(.loadingFailed(error)))
+                return
+            }
+
+            if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
+                completion(.failure(.cancelled))
+                return
+            }
+
+            guard let image else {
+                completion(.failure(.noImage))
+                return
+            }
+
+            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+
+            if isDegraded {
+                completion(.success(.low(image)))
+            } else {
+                self.imageCacheManager.saveImage(image, cacheKey: cacheKey)
+                completion(.success(.high(image)))
+            }
+        }
+    }
 }
