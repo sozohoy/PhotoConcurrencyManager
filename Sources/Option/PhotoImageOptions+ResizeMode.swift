@@ -2,7 +2,6 @@ import Foundation
 import Photos
 
 public extension PhotoImageOptions {
-    @frozen
     enum ResizeMode: Sendable {
         case exact
         case fast

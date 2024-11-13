@@ -2,7 +2,6 @@ import Foundation
 import Photos
 
 public extension PhotoImageOptions {
-    @frozen
     enum ContentMode: Sendable {
         case aspectFit
         case aspectFill

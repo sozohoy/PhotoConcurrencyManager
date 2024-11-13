@@ -1,7 +1,6 @@
 import Foundation
 
 public extension PhotoImageOptions {
-    @frozen
     enum iCloudAccessMode: Sendable {
         case allowed
         case deny

@@ -2,7 +2,6 @@ import Foundation
 import Photos
 
 public extension PhotoImageOptions {
-    @frozen
     enum DeliveryMode: Sendable {
         case fast
         case opportunistic

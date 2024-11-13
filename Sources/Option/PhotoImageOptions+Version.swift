@@ -2,7 +2,6 @@ import Foundation
 import Photos
 
 public extension PhotoImageOptions {
-    @frozen
     enum Version: Sendable {
         case current
         case unadjusted

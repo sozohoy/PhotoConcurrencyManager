@@ -1,7 +1,6 @@
 import Foundation
 
 public extension PhotoImageOptions {
-    @frozen
     enum SynchronousMode: Sendable {
         case sync
         case async
