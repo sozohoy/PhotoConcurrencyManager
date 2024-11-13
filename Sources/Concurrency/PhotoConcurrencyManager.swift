@@ -3,7 +3,7 @@ import UIKit
 
 public final class PhotoConcurrencyManager {
 
-    public enum ImageQuality {
+    public enum ImageQuality: @unchecked Sendable {
         case low(UIImage)
         case high(UIImage)
     }
