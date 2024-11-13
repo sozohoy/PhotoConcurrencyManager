@@ -1,7 +1,7 @@
 import Photos
 import UIKit
 
-public final class PhotoConcurrencyManager {
+public final class PhotoConcurrencyManager: @unchecked Sendable {
 
     public enum ImageQuality: @unchecked Sendable {
         case low(UIImage)
@@ -103,45 +103,87 @@ public final class PhotoConcurrencyManager {
                 targetSize: targetSize
             )
 
-            if let cachedImage = imageCacheManager.getImage(cacheKey: cacheKey) {
+            if let cachedImage = getCachedImage(
+                for: asset,
+                targetSize: targetSize,
+                cacheKey: cacheKey
+            ) {
                 continuation.yield(.high(cachedImage))
                 continuation.finish()
                 return
             }
 
-            imageManager.requestImage(
-                for: asset,
+            let requestID = requestImage(
+                asset: asset,
                 targetSize: targetSize,
-                contentMode: contentMode.option,
-                options: configuration.toPHImageRequestOptions()
-            ) { [weak self] image, info in
-                guard let self else { return }
+                contentMode: contentMode,
+                configuration: configuration,
+                continuation: continuation,
+                cacheKey: cacheKey
+            )
 
-                if let error = info?[PHImageErrorKey] as? Error {
-                    continuation.finish(throwing: ImageLoadingError.loadingFailed(error))
-                    return
-                }
+            setupTermination(requestID: requestID, continuation: continuation)
+        }
+    }
 
-                if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
-                    continuation.finish(throwing: ImageLoadingError.cancelled)
-                    return
-                }
+    private func getCachedImage(
+        for asset: PHAsset,
+        targetSize: CGSize,
+        cacheKey: ImageCacheManager.CacheKey
+    ) -> UIImage? {
+        return imageCacheManager.getImage(cacheKey: cacheKey)
+    }
 
-                guard let image else {
-                    continuation.finish(throwing: ImageLoadingError.noImage)
-                    return
-                }
+    private func requestImage(
+        asset: PHAsset,
+        targetSize: CGSize,
+        contentMode: PhotoImageOptions.ContentMode,
+        configuration: PhotoImageOptions.Configuration,
+        continuation: AsyncThrowingStream<ImageQuality, Error>.Continuation,
+        cacheKey: ImageCacheManager.CacheKey
+    ) -> PHImageRequestID {
+        return imageManager.requestImage(
+            for: asset,
+            targetSize: targetSize,
+            contentMode: contentMode.option,
+            options: configuration.toPHImageRequestOptions()
+        ) { [weak self] image, info in
+            guard let self else { return }
 
-                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-
-                if isDegraded {
-                    continuation.yield(.low(image))
-                } else {
-                    self.imageCacheManager.saveImage(image, cacheKey: cacheKey)
-                    continuation.yield(.high(image))
-                    continuation.finish()
-                }
+            if let error = info?[PHImageErrorKey] as? Error {
+                continuation.finish(throwing: ImageLoadingError.loadingFailed(error))
+                return
             }
+
+            if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
+                continuation.finish(throwing: ImageLoadingError.cancelled)
+                return
+            }
+
+            guard let image else {
+                continuation.finish(throwing: ImageLoadingError.noImage)
+                return
+            }
+
+            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+
+            if isDegraded {
+                continuation.yield(.low(image))
+            } else {
+                self.imageCacheManager.saveImage(image, cacheKey: cacheKey)
+                continuation.yield(.high(image))
+                continuation.finish()
+            }
+        }
+    }
+
+    private func setupTermination(
+        requestID: PHImageRequestID,
+        continuation: AsyncThrowingStream<ImageQuality, Error>.Continuation
+    ) {
+        continuation.onTermination = { @Sendable _ in
+            dump("cancel image request: \(requestID)")
+            self.imageManager.cancelImageRequest(requestID)
         }
     }
 
