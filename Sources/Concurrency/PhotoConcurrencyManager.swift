@@ -1,8 +1,9 @@
 import Photos
 import UIKit
 
-public final class PhotoConcurrencyManager: @unchecked Sendable {
-    public enum ImageQuality: @unchecked Sendable  {
+public final class PhotoConcurrencyManager {
+
+    public enum ImageQuality {
         case low(UIImage)
         case high(UIImage)
     }
@@ -27,6 +28,19 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
 
     public func fetchAssets(identifiers: [String]) -> PHFetchResult<PHAsset> {
         PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+    }
+
+    public func fetchAllResult() -> PHFetchResult<PHAsset> {
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        fetchOptions.predicate =  NSPredicate(
+            format: "mediaType == %d || mediaType == %d",
+            PHAssetMediaType.image.rawValue,
+            PHAssetMediaType.video.rawValue
+        )
+        let fetchAssets = PHAsset.fetchAssets(with: fetchOptions)
+
+        return fetchAssets
     }
 
     public func fetchAssets() -> [PHAsset] {
@@ -84,9 +98,6 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
         configuration: PhotoImageOptions.Configuration
     ) -> AsyncThrowingStream<ImageQuality, Error> {
         AsyncThrowingStream { continuation in
-
-            imageManager.stopCachingImagesForAllAssets()
-
             let cacheKey = ImageCacheManager.CacheKey(
                 identifier: asset.localIdentifier,
                 targetSize: targetSize
@@ -207,4 +218,5 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
             }
         }
     }
+
 }
