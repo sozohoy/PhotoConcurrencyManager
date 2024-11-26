@@ -181,9 +181,13 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
         requestID: PHImageRequestID,
         continuation: AsyncThrowingStream<ImageQuality, Error>.Continuation
     ) {
-        continuation.onTermination = { @Sendable _ in
-            dump("finish image request: \(requestID)")
-            self.imageManager.cancelImageRequest(requestID)
+        continuation.onTermination = { reason in
+            switch reason {
+            case .cancelled:
+                dump("finish image request: \(requestID)")
+                self.imageManager.cancelImageRequest(requestID)
+            default: return
+            }
         }
     }
 
