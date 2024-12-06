@@ -103,26 +103,28 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
                 targetSize: targetSize
             )
 
-            if let cachedImage = getCachedImage(
-                for: asset,
-                targetSize: targetSize,
-                cacheKey: cacheKey
-            ) {
-                continuation.yield(.high(cachedImage))
-                continuation.finish()
-                return
+            Task {
+                if let cachedImage = await getCachedImage(
+                    for: asset,
+                    targetSize: targetSize,
+                    cacheKey: cacheKey
+                ) {
+                    continuation.yield(.high(cachedImage))
+                    continuation.finish()
+                    return
+                }
+
+                let requestID = requestImage(
+                    asset: asset,
+                    targetSize: targetSize,
+                    contentMode: contentMode,
+                    configuration: configuration,
+                    continuation: continuation,
+                    cacheKey: cacheKey
+                )
+
+                setupTermination(requestID: requestID, continuation: continuation)
             }
-
-            let requestID = requestImage(
-                asset: asset,
-                targetSize: targetSize,
-                contentMode: contentMode,
-                configuration: configuration,
-                continuation: continuation,
-                cacheKey: cacheKey
-            )
-
-            setupTermination(requestID: requestID, continuation: continuation)
         }
     }
 
@@ -130,8 +132,8 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
         for asset: PHAsset,
         targetSize: CGSize,
         cacheKey: ImageCacheManager.CacheKey
-    ) -> UIImage? {
-        return imageCacheManager.getImage(cacheKey: cacheKey)
+    ) async -> UIImage? {
+        return await imageCacheManager.getImage(cacheKey: cacheKey)
     }
 
     private func requestImage(
@@ -170,7 +172,9 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
             if isDegraded {
                 continuation.yield(.low(image))
             } else {
-                self.imageCacheManager.saveImage(image, cacheKey: cacheKey)
+                Task {
+                    await imageCacheManager.saveImage(image, cacheKey: cacheKey)
+                }
                 continuation.yield(.high(image))
                 continuation.finish()
             }
@@ -220,13 +224,13 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
         contentMode: PhotoImageOptions.ContentMode,
         configuration: PhotoImageOptions.Configuration,
         completion: @escaping (Result<ImageQuality, ImageLoadingError>) -> Void
-    ) {
+    ) async {
         let cacheKey = ImageCacheManager.CacheKey(
             identifier: asset.localIdentifier,
             targetSize: targetSize
         )
 
-        if let cachedImage = imageCacheManager.getImage(cacheKey: cacheKey) {
+        if let cachedImage = await imageCacheManager.getImage(cacheKey: cacheKey) {
             completion(.success(.high(cachedImage)))
             return
         }
@@ -259,7 +263,9 @@ public final class PhotoConcurrencyManager: @unchecked Sendable {
             if isDegraded {
                 completion(.success(.low(image)))
             } else {
-                self.imageCacheManager.saveImage(image, cacheKey: cacheKey)
+                Task {
+                    await imageCacheManager.saveImage(image, cacheKey: cacheKey)
+                }
                 completion(.success(.high(image)))
             }
         }

@@ -1,6 +1,6 @@
 import UIKit
 
-class ImageCacheManager: @unchecked Sendable {
+actor ImageCacheManager {
     static let shared = ImageCacheManager()
 
     private enum Constants {
